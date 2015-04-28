@@ -1,0 +1,5 @@
+name = Domain Role Sync
+description = Sync roles when users are assigned to and removed from domains.
+core = 7.x
+package = Domain Access
+dependencies[] = domain

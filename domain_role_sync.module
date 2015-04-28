@@ -1,0 +1,136 @@
+<?php
+
+/**
+ * @file
+ * Sync roles when users are assigned to and removed from domains.
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function domain_role_sync_menu() {
+  $items = array();
+
+  $items['admin/structure/domain/role_sync'] = array(
+    'title' => 'Domain role sync',
+    'description' => 'Administer domain role sync.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('domain_role_sync_admin_settings_form'),
+    'access arguments' => array('administer group'),
+    'file' => 'domain_role_sync.admin.inc',
+    'type' => MENU_LOCAL_TASK,
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_user_update().
+ */
+function domain_role_sync_user_update(&$edit, $account, $category) {
+  domain_role_sync_sync_roles($account);
+}
+
+/**
+ * Syncs roles for a user.
+ *
+ * @param $user
+ *   The user to sync.
+ */
+function domain_role_sync_sync_roles($user) {
+  $domain_role_sync_roles = domain_role_sync_get_roles_to_sync();
+  $user_domains = domain_get_user_domains($user);
+  $roles = $user->roles;
+  $roles_that_can_be_synced = domain_role_sync_get_all_roles_that_can_be_synced();
+
+  // First remove all roles that can be synced.
+  $roles = array_diff($roles, $roles_that_can_be_synced);
+
+  // Assign roles for each domain.
+  foreach ($user_domains as $domain_id) {
+    if (!empty($domain_role_sync_roles[$domain_id])) {
+      $roles = $domain_role_sync_roles[$domain_id];
+      foreach ($roles as $rid) {
+        $role = user_role_load($rid);
+        if (!isset($user->roles[$role->rid])) {
+          $roles = $user->roles + array($role->rid => $role->name);
+        }
+      }
+    }
+  }
+
+  // Save user roles.
+  user_save($user, array('roles' => $roles));
+
+  // If og role is set to be synced, sync it.
+//  foreach ($domain_role_sync_roles as $site_rid => $og_rids) {
+//    $og_rids = $og_rids['og_rids'];
+//    if (in_array($og_rid, $og_rids)) {
+//      $site_role = user_role_load($site_rid);
+//
+//      switch ($action) {
+//        // If action is grant, add new user role.
+//        case 'grant':
+//          if (!isset($user->roles[$site_role->rid])) {
+//            $roles = $user->roles + array($site_role->rid => $site_role->name);
+//            user_save($user, array('roles' => $roles));
+//          }
+//          break;
+//        // If action is revoke, remove user role.
+//        case 'revoke':
+//          // If user does not have this OG role in other groups, we remove it.
+//          if (!domain_role_sync_user_has_group_role($uid, $og_rid)) {
+//            $roles = $user->roles;
+//            if (isset($roles[$site_rid])) {
+//              unset($roles[$site_rid]);
+//              user_save($user, array('roles' => $roles));
+//            }
+//          }
+//          break;
+//      }
+//
+//    }
+//  }
+}
+
+/**
+ * Returns an array of roles that should be synced.
+ */
+function domain_role_sync_get_roles_to_sync() {
+  $roles = array();
+  $domain_role_sync_settings = variable_get('domain_role_sync_settings', array());
+  // Remove empty values.
+  foreach ($domain_role_sync_settings as $domain_id => $domain) {
+    $roles[$domain_id] = array_filter($domain['roles']);
+  }
+  return $roles;
+}
+
+function domain_role_sync_get_all_roles_that_can_be_synced() {
+  $roles = array();
+  $domain_role_sync_settings = variable_get('domain_role_sync_settings', array());
+
+  // Create an array of roles.
+  foreach ($domain_role_sync_settings as $domain_id => $domain) {
+    foreach ($domain['roles'] as $rid) {
+      if ($rid !== 0) {
+        $roles[$rid] = $rid;
+      }
+    }
+  }
+
+  return $roles;
+}
+
+/**
+ * Helper function to get an #options ready domains array.
+ * @return array
+ */
+function domain_role_sync_get_domain_options() {
+  $domains = domain_domains();
+  foreach ($domains as $key => $value) {
+    $domains[$key] = $value['sitename'];
+  }
+  return $domains;
+}
+
