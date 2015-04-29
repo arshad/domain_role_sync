@@ -61,40 +61,10 @@ function domain_role_sync_sync_roles($user) {
 
   // Save user roles.
   user_save($user, array('roles' => $roles));
-
-  // If og role is set to be synced, sync it.
-//  foreach ($domain_role_sync_roles as $site_rid => $og_rids) {
-//    $og_rids = $og_rids['og_rids'];
-//    if (in_array($og_rid, $og_rids)) {
-//      $site_role = user_role_load($site_rid);
-//
-//      switch ($action) {
-//        // If action is grant, add new user role.
-//        case 'grant':
-//          if (!isset($user->roles[$site_role->rid])) {
-//            $roles = $user->roles + array($site_role->rid => $site_role->name);
-//            user_save($user, array('roles' => $roles));
-//          }
-//          break;
-//        // If action is revoke, remove user role.
-//        case 'revoke':
-//          // If user does not have this OG role in other groups, we remove it.
-//          if (!domain_role_sync_user_has_group_role($uid, $og_rid)) {
-//            $roles = $user->roles;
-//            if (isset($roles[$site_rid])) {
-//              unset($roles[$site_rid]);
-//              user_save($user, array('roles' => $roles));
-//            }
-//          }
-//          break;
-//      }
-//
-//    }
-//  }
 }
 
 /**
- * Returns an array of roles that should be synced.
+ * Cleans up and returns domain_role_sync_settings.
  */
 function domain_role_sync_get_roles_to_sync() {
   $roles = array();
@@ -106,6 +76,9 @@ function domain_role_sync_get_roles_to_sync() {
   return $roles;
 }
 
+/**
+ * Returns an array of roles that can be synced.
+ */
 function domain_role_sync_get_all_roles_that_can_be_synced() {
   $roles = array();
   $domain_role_sync_settings = variable_get('domain_role_sync_settings', array());
